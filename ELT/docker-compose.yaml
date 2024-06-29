@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  source_postgres:  # name of the service
+    image: postgres:15.6
+    ports:
+      - "5433:5432"
+    networks:
+      - elt_network
+    environment:
+      POSTGRES_DB: source_db  # name of the database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - ./source_init_db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  destination_postgres:  # name of the service
+    image: postgres:15.6
+    ports:
+      - "5434:5432"
+    networks:
+      - elt_network
+    environment:
+      POSTGRES_DB: destination_db  # name of the database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+  
+  elt_script:
+    build:
+      context: ./elt # This is where the docker file should be
+      dockerfile: Dockerfile
+    command: ["python", "elt_script.py"]  # Properly indented within elt_script service
+    networks:
+      - elt_network
+    depends_on:  # this will run only if they are running
+      - source_postgres
+      - destination_postgres
+
+networks:
+  elt_network:
+    driver: bridge
+
